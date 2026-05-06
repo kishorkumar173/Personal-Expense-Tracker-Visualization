@@ -212,7 +212,7 @@ report = {
 }
 
 report_df = pd.DataFrame(report)
-
+os.makedirs("reports", exist_ok=True)
 report_df.to_csv("reports/summary_report.csv", index=False)
 
 print("\nReport Generated Successfully")

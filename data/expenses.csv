@@ -9,3 +9,5 @@ Date,Category,Amount,Payment_Method,Description
 2026-01-08,Shopping,2500,Card,Shoes
 2026-01-09,Bills,1800,UPI,Internet Bill
 2026-01-10,Food,450,Cash,Snacks
+2026-01-11,Healthcare,700,Card,Medicine
+2026-01-12,Education,1200,UPI,Course Fee
