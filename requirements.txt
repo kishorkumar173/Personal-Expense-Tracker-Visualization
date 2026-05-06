@@ -3,6 +3,3 @@ pandas
 plotly
 reportlab
 openpyxl
-tensorflow
-keras
-h5py
