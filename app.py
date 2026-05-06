@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+import sqlite3
 
 # -------------------------------------------------
 # PAGE CONFIGURATION
@@ -52,6 +53,7 @@ section[data-testid="stSidebar"] {
 os.makedirs("data", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
+os.makedirs("database", exist_ok=True)
 
 # -------------------------------------------------
 # TITLE
@@ -109,6 +111,43 @@ sample_df = pd.DataFrame(sample_data)
 sample_df.to_csv("data/expenses.csv", index=False)
 
 # -------------------------------------------------
+# SQLITE DATABASE CONNECTION
+# -------------------------------------------------
+
+conn = sqlite3.connect(
+    "database/expenses.db",
+    check_same_thread=False
+)
+
+cursor = conn.cursor()
+
+
+# -------------------------------------------------
+# CREATE TABLE
+# -------------------------------------------------
+
+cursor.execute("""
+
+CREATE TABLE IF NOT EXISTS expenses (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    Date TEXT,
+
+    Category TEXT,
+
+    Amount REAL,
+
+    Payment_Method TEXT,
+
+    Description TEXT
+
+)
+
+""")
+
+conn.commit()
+# -------------------------------------------------
 # SIDEBAR
 # -------------------------------------------------
 
@@ -130,6 +169,17 @@ if uploaded_file is not None:
 else:
     df = pd.read_csv("data/expenses.csv")
     st.sidebar.info("Using Sample Dataset")
+    
+# -------------------------------------------------
+# SAVE DATA TO SQLITE
+# -------------------------------------------------
+
+df.to_sql(
+    "expenses",
+    conn,
+    if_exists="replace",
+    index=False
+)
 
 # -------------------------------------------------
 # DATA CLEANING
@@ -140,6 +190,73 @@ df.dropna(inplace=True)
 df["Date"] = pd.to_datetime(df["Date"])
 
 df["Month"] = df["Date"].dt.month_name()
+
+# -------------------------------------------------
+# MANUAL EXPENSE ENTRY
+# -------------------------------------------------
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("➕ Add New Expense")
+
+expense_date = st.sidebar.date_input("Date")
+
+expense_category = st.sidebar.selectbox(
+    "Category",
+    [
+        "Food",
+        "Transport",
+        "Shopping",
+        "Bills",
+        "Entertainment",
+        "Healthcare",
+        "Education"
+    ]
+)
+
+expense_amount = st.sidebar.number_input(
+    "Amount",
+    min_value=1.0
+)
+
+expense_payment = st.sidebar.selectbox(
+    "Payment Method",
+    ["UPI", "Cash", "Card"]
+)
+
+expense_description = st.sidebar.text_input(
+    "Description"
+)
+
+if st.sidebar.button("Add Expense"):
+
+    cursor.execute("""
+
+    INSERT INTO expenses (
+        Date,
+        Category,
+        Amount,
+        Payment_Method,
+        Description
+    )
+
+    VALUES (?, ?, ?, ?, ?)
+
+    """, (
+
+        str(expense_date),
+        expense_category,
+        expense_amount,
+        expense_payment,
+        expense_description
+
+    ))
+
+    conn.commit()
+
+    st.sidebar.success("Expense Added Successfully")
+
+    st.rerun()
 
 # -------------------------------------------------
 # FILTERS
@@ -158,6 +275,14 @@ selected_payment = st.sidebar.multiselect(
     options=df["Payment_Method"].unique(),
     default=df["Payment_Method"].unique()
 )
+db_df = pd.read_sql_query(
+    "SELECT * FROM expenses",
+    conn
+)
+
+db_df["Date"] = pd.to_datetime(db_df["Date"])
+
+db_df["Month"] = db_df["Date"].dt.month_name()
 
 filtered_df = df[
     (df["Category"].isin(selected_category)) &
